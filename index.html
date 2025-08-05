@@ -5,10 +5,7 @@
     <title>Points on a map</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
-    <link
-      href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css"
-      rel="stylesheet"
-    />
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet" />
     <style>
       body {
         margin: 0;
@@ -23,20 +20,71 @@
         width: 100%;
       }
 
+      .title-bar {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.9);
+        padding: 8px 12px;
+        font-size: 16px;
+        font-weight: bold;
+        z-index: 3;
+        border-radius: 4px;
+      }
+
+      #controls-container {
+        position: absolute;
+        top: 10px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        z-index: 3;
+        border-radius: 6px;
+        padding: 8px;
+        width: 250px;
+      }
+
+      #toggle-controls {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 10px;
+      }
+
+      #toggle-controls button {
+        margin-bottom: 5px;
+        border: none;
+        padding: 10px;
+        cursor: pointer;
+        background: #e6f4ea;
+        color: #117833;
+        border-radius: 4px;
+        font-weight: bold;
+        text-align: center;
+      }
+
+      #toggle-controls button.active {
+        background: #117833;
+        color: white;
+      }
+
       .year-selector {
         display: flex;
-        position: absolute;
-        width: 100%;
-        z-index: 3;
+        flex-direction: column;
+        gap: 7px;
       }
 
       .year-selector button {
-        flex: 1;
         border: none;
-        padding: 10px 0;
-        font-size: 14px;
+        padding: 6px;
+        font-size: 12px;
         cursor: pointer;
         color: black;
+        border-radius: 4px;
+        padding: 5px;
+        height: 30px;
       }
 
       .year-selector button[data-year="2019"] { background: #d4abab; }
@@ -54,26 +102,16 @@
       .year-selector button.active {
         color: white;
         font-weight: bold;
-        border: 3px solid black;
-      }
-
-      .title-bar {
-        position: absolute;
-        top: 40px;
-        left: 20px;
-        background: rgba(255, 255, 255, 0.9);
-        padding: 8px 12px;
-        margin-top: 10px;
-        font-size: 16px;
-        font-weight: bold;
-        z-index: 2;
+        border: 2px solid black;
       }
 
       #legend {
         position: absolute;
-        top: 100px;
+        top: 10px;
         left: 20px;
         background: rgba(255, 255, 255, 0.9);
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         padding: 10px;
         line-height: 18px;
         width: 220px;
@@ -85,53 +123,6 @@
         width: 10px;
         height: 10px;
         margin-right: 5px;
-      }
-
-      #toggle-controls {
-        position: absolute;
-        top: 45px;
-        right: 10px;
-        background: rgba(255, 255, 255, 0.9);
-        padding: 10px;
-        margin-top: 10px;
-        line-height: 18px;
-        width: 200px;
-        z-index: 2;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }
-
-        #toggle-controls button {
-        margin-bottom: 10px;
-        border: none;
-        padding: 10px;
-        cursor: pointer;
-        background: #f0f0f0;
-        border-radius: 4px;
-        }
-
-        #toggle-controls button.active {
-        background: #117833;
-        color: white;
-        }
-
-
-      .toggle-panel {
-        position: absolute;
-        top: 45px;
-        right: 10px;
-        background: rgba(255, 255, 255, 0.95);
-        padding: 10px;
-        border: 1px solid #ccc;
-        font-size: 14px;
-        width: 200px;
-        z-index: 2;
-      }
-
-      .toggle-panel label {
-        display: block;
-        margin-bottom: 5px;
       }
 
       .data-info {
@@ -148,53 +139,57 @@
       }
 
       .mapboxgl-popup.custom-popup {
-        max-width: 250px;
+        width: auto;
         max-height: 20px;
         font-family: Arial, sans-serif;
         font-size: 13px;
         background: white;
         border-radius: 6px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    }
+      }
 
-    .mapboxgl-popup.custom-popup p {
+      .mapboxgl-popup.custom-popup p {
         margin: 0;
         color: #333;
         font-size: 12px;
-    }
+      }
 
-    .mapboxgl-popup.custom-popup h3 {
+      .mapboxgl-popup.custom-popup h3 {
         margin: 0 0 1px;
         font-size: 14px;
         color: #aa3a45;
-    }
+      }
     </style>
   </head>
   <body>
-    <div class="year-selector" id="year-selector">
-      <button data-year="2019">2019</button>
-      <button data-year="2020">2020</button>
-      <button data-year="2021">2021</button>
-      <button data-year="2022">2022</button>
-      <button data-year="2023">2023</button>
-      <button data-year="2024">2024</button>
-      <button data-year="2025">2025</button>
-    </div>
-
+    <div class="title-bar">Pedestrian and Biking Crashes in Berkeley as Road Improvements Continue</div>
     <div id="map"></div>
 
-    <div class="title-bar">Pedestrian and Biking Crashes in Berkeley</div>
-    <div id="legend"></div>
-
-    <div id="toggle-controls">
+    <div id="controls-container">
+      <div id="toggle-controls">
         <button id="toggle-bicycle" class="active">Show Bicycle Crashes</button>
         <button id="toggle-pedestrian" class="active">Show Pedestrian Crashes</button>
+      </div>
+
+      <div class="year-selector" id="year-selector">
+        <button data-year="2019">2019</button>
+        <button data-year="2020">2020</button>
+        <button data-year="2021">2021</button>
+        <button data-year="2022">2022</button>
+        <button data-year="2023">2023</button>
+        <button data-year="2024">2024</button>
+        <button data-year="2025">2025</button>
+      </div>
     </div>
 
+    <div id="legend"></div>
+
     <div class="data-info">
-      Chart: Esha Bansiya/The Daily Californian | Data source: <a href="https://tims.berkeley.edu/" target="_blank" style="color:#0077cc; text-decoration:underline;">
-    Transportation Injury Mapping System</a>
-  | Crash Data from 2023-2025 is provisional and subject to change. | 2025 data is until March
+      Chart: Esha Bansiya/The Daily Californian | Data source:
+      <a href="https://tims.berkeley.edu/" target="_blank" style="color:#0077cc; text-decoration:underline;">
+        Transportation Injury Mapping System
+      </a>
+      | Crash Data from 2023-2025 is provisional and subject to change. | 2025 data is until March
     </div>
 
     <script>
@@ -256,7 +251,7 @@
         const yearButtons = document.querySelectorAll('#year-selector button');
         let selectedYear = 2019;
 
-        map.setFilter('allcrashes2-d4hhs7', ['==', 'ACCIDENT_YEAR', selectedYear]);
+        map.setFilter('allcrashes3-8p8tg3', ['==', 'ACCIDENT_YEAR', selectedYear]);
         map.setFilter('map-2-1wq16q', ['==', 'Year', selectedYear]);
         document.querySelector(`#year-selector button[data-year="${selectedYear}"]`).classList.add('active');
 
@@ -265,7 +260,7 @@
             yearButtons.forEach(b => b.classList.remove('active'));
             button.classList.add('active');
             selectedYear = parseInt(button.getAttribute('data-year'));
-            map.setFilter('allcrashes2-d4hhs7', ['==', 'ACCIDENT_YEAR', selectedYear]);
+            map.setFilter('allcrashes3-8p8tg3', ['==', 'ACCIDENT_YEAR', selectedYear]);
             map.setFilter('map-2-1wq16q', ['<=', 'Year', selectedYear]);
             updateLayerVisibility();
           });
@@ -278,41 +273,66 @@
         const pedestrianButton = document.getElementById('toggle-pedestrian');
 
         function updateLayerVisibility() {
-        map.setFilter('allcrashes2-d4hhs7', [
+          map.setFilter('allcrashes3-8p8tg3', [
             "all",
             ...(isBicycleVisible ? [] : [["!=", "BICYCLE_ACCIDENT", "Y"]]),
             ...(isPedestrianVisible ? [] : [["!=", "PEDESTRIAN_ACCIDENT", "Y"]]),
             ["==", "ACCIDENT_YEAR", selectedYear]
-        ]);
+          ]);
         }
 
         bicycleButton.addEventListener('click', () => {
-        isBicycleVisible = !isBicycleVisible;
-        bicycleButton.classList.toggle('active', isBicycleVisible);
-        updateLayerVisibility();
+          isBicycleVisible = !isBicycleVisible;
+          bicycleButton.classList.toggle('active', isBicycleVisible);
+          updateLayerVisibility();
         });
 
         pedestrianButton.addEventListener('click', () => {
-        isPedestrianVisible = !isPedestrianVisible;
-        pedestrianButton.classList.toggle('active', isPedestrianVisible);
-        updateLayerVisibility();
+          isPedestrianVisible = !isPedestrianVisible;
+          pedestrianButton.classList.toggle('active', isPedestrianVisible);
+          updateLayerVisibility();
         });
 
         updateLayerVisibility();
-
       });
 
       map.on('click', (event) => {
-        const features = map.queryRenderedFeatures(event.point, { layers: ['allcrashes2-d4hhs7'] });
+        const pcfViolations = {
+          "00": "Unknown",
+          "01": "Driving or Bicycling Under the Influence of Alcohol or Drug",
+          "03": "Unsafe Speed",
+          "04": "Following Too Closely",
+          "05": "Wrong Side of Road",
+          "06": "Improper Passing",
+          "07": "Unsafe Lane Change",
+          "08": "Improper Turning",
+          "09": "Automobile Right of Way",
+          "10": "Pedestrian Right of Way",
+          "11": "Pedestrian Violation",
+          "12": "Traffic Signals and Signs",
+          "14": "Lights",
+          "17": "Other Hazardous Violation",
+          "18": "Other Than Driver (or Pedestrian)",
+          "21": "Unsafe Starting or Backing",
+          "22": "Other Improper Driving"
+        };
+
+        const features = map.queryRenderedFeatures(event.point, { layers: ['allcrashes3-8p8tg3'] });
         if (!features.length) return;
         const feature = features[0];
 
         const bikeCrash = feature.properties.BICYCLE_ACCIDENT ? `<p>Bicycle Crash: ${feature.properties.BICYCLE_ACCIDENT}</p>` : '';
         const pedestrianCrash = feature.properties.PEDESTRIAN_ACCIDENT ? `<p>Pedestrian Crash: ${feature.properties.PEDESTRIAN_ACCIDENT}</p>` : '';
+        const pcfCode = feature.properties.PCF_VIOL_CATEGORY;
+        const pcfDescription = pcfViolations[pcfCode] || "Unknown";
 
         new mapboxgl.Popup({ offset: [0, -15], className: 'custom-popup'})
           .setLngLat(feature.geometry.coordinates)
-          .setHTML(`<h3>${feature.properties.COLLISION_SEVERITY}</h3>${bikeCrash}${pedestrianCrash}`)
+          .setHTML(`<h3>Case ID: ${feature.properties.CASE_ID}</h3>
+            <p>Crash Date: ${feature.properties.COLLISION_DATE}</p>
+            <p>Crash Severity: ${feature.properties.COLLISION_SEVERITY}</p>
+            <p>PCF Violation: ${pcfDescription}</p>
+            ${bikeCrash}${pedestrianCrash}`)
           .addTo(map);
       });
     </script>
