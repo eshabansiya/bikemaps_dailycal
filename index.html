@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Points on a map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+      }
+
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+
+      .year-selector {
+        display: flex;
+        position: absolute;
+        width: 100%;
+        z-index: 3;
+      }
+
+      .year-selector button {
+        flex: 1;
+        border: none;
+        padding: 10px 0;
+        font-size: 14px;
+        cursor: pointer;
+        color: black;
+      }
+
+      .year-selector button[data-year="2019"] { background: #d4abab; }
+      .year-selector button[data-year="2020"] { background: #ffe5ba; }
+      .year-selector button[data-year="2021"] { background: #fcac73; }
+      .year-selector button[data-year="2022"] { background: #f4854d; }
+      .year-selector button[data-year="2023"] { background: #e5653d; }
+      .year-selector button[data-year="2024"] { background: #bd5050; }
+      .year-selector button[data-year="2025"] { background: #aa3a45; }
+
+      .year-selector button:hover {
+        filter: brightness(90%);
+      }
+
+      .year-selector button.active {
+        color: white;
+        font-weight: bold;
+        border: 3px solid black;
+      }
+
+      .title-bar {
+        position: absolute;
+        top: 40px;
+        left: 20px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 8px 12px;
+        margin-top: 10px;
+        font-size: 16px;
+        font-weight: bold;
+        z-index: 2;
+      }
+
+      #legend {
+        position: absolute;
+        top: 100px;
+        left: 20px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 10px;
+        line-height: 18px;
+        width: 220px;
+        z-index: 2;
+      }
+
+      .legend-key {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        margin-right: 5px;
+      }
+
+      #toggle-controls {
+        position: absolute;
+        top: 45px;
+        right: 10px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 10px;
+        margin-top: 10px;
+        line-height: 18px;
+        width: 200px;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+        #toggle-controls button {
+        margin-bottom: 10px;
+        border: none;
+        padding: 10px;
+        cursor: pointer;
+        background: #f0f0f0;
+        border-radius: 4px;
+        }
+
+        #toggle-controls button.active {
+        background: #117833;
+        color: white;
+        }
+
+
+      .toggle-panel {
+        position: absolute;
+        top: 45px;
+        right: 10px;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 10px;
+        border: 1px solid #ccc;
+        font-size: 14px;
+        width: 200px;
+        z-index: 2;
+      }
+
+      .toggle-panel label {
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      .data-info {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(255, 255, 255, 0.95);
+        text-align: center;
+        padding: 8px;
+        font-size: 13px;
+        border-top: 1px solid #ccc;
+        z-index: 2;
+      }
+
+      .mapboxgl-popup.custom-popup {
+        max-width: 250px;
+        max-height: 20px;
+        font-family: Arial, sans-serif;
+        font-size: 13px;
+        background: white;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .mapboxgl-popup.custom-popup p {
+        margin: 0;
+        color: #333;
+        font-size: 12px;
+    }
+
+    .mapboxgl-popup.custom-popup h3 {
+        margin: 0 0 1px;
+        font-size: 14px;
+        color: #aa3a45;
+    }
+    </style>
+  </head>
+  <body>
+    <div class="year-selector" id="year-selector">
+      <button data-year="2019">2019</button>
+      <button data-year="2020">2020</button>
+      <button data-year="2021">2021</button>
+      <button data-year="2022">2022</button>
+      <button data-year="2023">2023</button>
+      <button data-year="2024">2024</button>
+      <button data-year="2025">2025</button>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="title-bar">Pedestrian and Biking Crashes in Berkeley</div>
+    <div id="legend"></div>
+
+    <div id="toggle-controls">
+        <button id="toggle-bicycle" class="active">Show Bicycle Crashes</button>
+        <button id="toggle-pedestrian" class="active">Show Pedestrian Crashes</button>
+    </div>
+
+    <div class="data-info">
+      Chart: Esha Bansiya/The Daily Californian | Data source: <a href="https://tims.berkeley.edu/" target="_blank" style="color:#0077cc; text-decoration:underline;">
+    Transportation Injury Mapping System</a>
+  | Crash Data from 2023-2025 is provisional and subject to change. | 2025 data is until March
+    </div>
+
+    <script>
+      mapboxgl.accessToken = 'pk.eyJ1IjoiZXNoYWJhbnNpeWEiLCJhIjoiY21kZ2s3cDQ5MHI2eTJxb2U0N3M2YmF6eCJ9.lECv9CCR7GA1SCyPAP3gXw';
+      const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/eshabansiya/cmdy2jbbo00cr01re9vc5adw2',
+        center: [-122.2730, 37.8715],
+        zoom: 13
+      });
+
+      map.on('load', () => {
+        const layers = ['Biking Crash', 'Pedestrian Crash', 'Fatality', 'Road Improvements'];
+        const colors = ['#0b6b13', '#0f77d2', '#b140b5', '#f4854d'];
+
+        const legend = document.getElementById('legend');
+        legend.innerHTML = '';
+
+        layers.forEach((layer, i) => {
+          const color = colors[i];
+          const item = document.createElement('div');
+          item.style.display = 'flex';
+          item.style.alignItems = 'center';
+          item.style.marginBottom = '4px';
+
+          const key = document.createElement('span');
+          key.className = 'legend-key';
+          key.style.width = '15px';
+          key.style.marginRight = '5px';
+
+          if (layer === 'Fatality') {
+            key.style.backgroundColor = 'white';
+            key.style.border = `2px solid ${color}`;
+            key.style.borderRadius = '50%';
+            key.style.height = '15px';
+          } else if (layer === 'Road Improvements') {
+            key.style.backgroundColor = color;
+            key.style.height = '6px';
+          } else {
+            key.style.backgroundColor = color;
+            key.style.borderRadius = '50%';
+            key.style.height = '15px';
+          }
+
+          const value = document.createElement('span');
+          value.innerHTML = layer;
+
+          item.appendChild(key);
+          item.appendChild(value);
+          legend.appendChild(item);
+        });
+
+        const note = document.createElement('p');
+        note.style.fontSize = '12px';
+        note.style.marginTop = '8px';
+        note.innerText = "Road improvements are colored by the year they were added.";
+        legend.appendChild(note);
+
+        const yearButtons = document.querySelectorAll('#year-selector button');
+        let selectedYear = 2019;
+
+        map.setFilter('allcrashes2-d4hhs7', ['==', 'ACCIDENT_YEAR', selectedYear]);
+        map.setFilter('map-2-1wq16q', ['==', 'Year', selectedYear]);
+        document.querySelector(`#year-selector button[data-year="${selectedYear}"]`).classList.add('active');
+
+        yearButtons.forEach(button => {
+          button.addEventListener('click', () => {
+            yearButtons.forEach(b => b.classList.remove('active'));
+            button.classList.add('active');
+            selectedYear = parseInt(button.getAttribute('data-year'));
+            map.setFilter('allcrashes2-d4hhs7', ['==', 'ACCIDENT_YEAR', selectedYear]);
+            map.setFilter('map-2-1wq16q', ['<=', 'Year', selectedYear]);
+            updateLayerVisibility();
+          });
+        });
+
+        let isBicycleVisible = true;
+        let isPedestrianVisible = true;
+
+        const bicycleButton = document.getElementById('toggle-bicycle');
+        const pedestrianButton = document.getElementById('toggle-pedestrian');
+
+        function updateLayerVisibility() {
+        map.setFilter('allcrashes2-d4hhs7', [
+            "all",
+            ...(isBicycleVisible ? [] : [["!=", "BICYCLE_ACCIDENT", "Y"]]),
+            ...(isPedestrianVisible ? [] : [["!=", "PEDESTRIAN_ACCIDENT", "Y"]]),
+            ["==", "ACCIDENT_YEAR", selectedYear]
+        ]);
+        }
+
+        bicycleButton.addEventListener('click', () => {
+        isBicycleVisible = !isBicycleVisible;
+        bicycleButton.classList.toggle('active', isBicycleVisible);
+        updateLayerVisibility();
+        });
+
+        pedestrianButton.addEventListener('click', () => {
+        isPedestrianVisible = !isPedestrianVisible;
+        pedestrianButton.classList.toggle('active', isPedestrianVisible);
+        updateLayerVisibility();
+        });
+
+        updateLayerVisibility();
+
+      });
+
+      map.on('click', (event) => {
+        const features = map.queryRenderedFeatures(event.point, { layers: ['allcrashes2-d4hhs7'] });
+        if (!features.length) return;
+        const feature = features[0];
+
+        const bikeCrash = feature.properties.BICYCLE_ACCIDENT ? `<p>Bicycle Crash: ${feature.properties.BICYCLE_ACCIDENT}</p>` : '';
+        const pedestrianCrash = feature.properties.PEDESTRIAN_ACCIDENT ? `<p>Pedestrian Crash: ${feature.properties.PEDESTRIAN_ACCIDENT}</p>` : '';
+
+        new mapboxgl.Popup({ offset: [0, -15], className: 'custom-popup'})
+          .setLngLat(feature.geometry.coordinates)
+          .setHTML(`<h3>${feature.properties.COLLISION_SEVERITY}</h3>${bikeCrash}${pedestrianCrash}`)
+          .addTo(map);
+      });
+    </script>
+  </body>
+</html>
