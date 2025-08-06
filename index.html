@@ -5,6 +5,7 @@
     <title>Points on a map</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet" />
     <style>
       body {
@@ -108,7 +109,7 @@
       #legend {
         position: absolute;
         top: 2%;
-        left: 1%;
+        left: 2%;
         background: rgba(255, 255, 255, 0.9);
         border-radius: 3%;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -159,6 +160,26 @@
         font-size: 14px;
         color: #aa3a45;
       }
+
+      #stats-box {
+        position: absolute;
+        top: 26%; 
+        left: 2%;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        padding: 10px;
+        width: 220px;
+        z-index: 2;
+        font-size: 14px;
+      }
+
+      #stats-box h4 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        text-align: center;
+      }
+
     </style>
   </head>
   <body>
@@ -183,6 +204,11 @@
     </div>
 
     <div id="legend"></div>
+
+    <div id="stats-box">
+      <h4>Crash Statistics</h4>
+      <canvas id="crashChart" width="200" height="120"></canvas>
+    </div>
 
     <div class="data-info">
       Chart: Esha Bansiya/The Daily Californian | Data source:
@@ -294,9 +320,74 @@
         });
 
         updateLayerVisibility();
+
+        let crashChart;
+
+        function updateCrashStats() {
+          const features = map.querySourceFeatures('composite', { sourceLayer: 'allcrashes3-8p8tg3' });
+
+          let pedestrianCount = 0;
+          let bicycleCount = 0;
+          let fatalCount = 0;
+
+          features.forEach(f => {
+            if (f.properties.ACCIDENT_YEAR == selectedYear) {
+              if (f.properties.PEDESTRIAN_ACCIDENT === 'Y') pedestrianCount++;
+              if (f.properties.BICYCLE_ACCIDENT === 'Y') bicycleCount++;
+              if (f.properties.COLLISION_SEVERITY === 'Fatal' || f.properties.COLLISION_SEVERITY === 'Severe Injury') fatalCount++;
+            }
+          });
+
+          const data = [pedestrianCount, bicycleCount, fatalCount];
+
+          if (crashChart) {
+            crashChart.data.datasets[0].data = data;
+            crashChart.update();
+          } else {
+            const ctx = document.getElementById('crashChart').getContext('2d');
+            crashChart = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: ['Pedestrian', 'Bicycle', 'Fatal or Severe'],
+                datasets: [{
+                  label: 'Crashes',
+                  data: data,
+                  backgroundColor: ['#0f77d2', '#0b6b13', '#b140b5']
+                }]
+              },
+              options: {
+                plugins: { legend: { display: false } },
+                scales: {
+                  y: { max: 150, ticks: { stepSize: 10 } },
+                }
+              }
+            });
+          }
+        }
+
+        updateCrashStats();
+
+        yearButtons.forEach(button => {
+          button.addEventListener('click', () => {
+            updateCrashStats();
+          });
+        });
+
       });
 
-      map.on('click', (event) => {
+      map.on('click', 'map-2-1wq16q', (event) => {
+        const roadFeature = event.features[0];
+        new mapboxgl.Popup({ offset: [0, -15], className: 'custom-popup' })
+          .setLngLat(event.lngLat)
+          .setHTML(`
+            <h3>Project: ${roadFeature.properties.Project}</h3>
+            <p>Year: ${roadFeature.properties.Year}</p>
+            <p>Vision Zero: ${roadFeature.properties["Vision Zero"] || 'No'}</p>
+          `)
+          .addTo(map);
+      });
+
+      map.on('click', 'allcrashes3-8p8tg3', (event) => {
         const pcfViolations = {
           "00": "Unknown",
           "01": "Driving or Bicycling Under the Influence of Alcohol or Drug",
@@ -317,10 +408,7 @@
           "22": "Other Improper Driving"
         };
 
-        const features = map.queryRenderedFeatures(event.point, { layers: ['allcrashes3-8p8tg3'] });
-        if (!features.length) return;
-        const feature = features[0];
-
+        const feature = event.features[0];
         const bikeCrash = feature.properties.BICYCLE_ACCIDENT ? `<p>Bicycle Crash: ${feature.properties.BICYCLE_ACCIDENT}</p>` : '';
         const pedestrianCrash = feature.properties.PEDESTRIAN_ACCIDENT ? `<p>Pedestrian Crash: ${feature.properties.PEDESTRIAN_ACCIDENT}</p>` : '';
         const pcfCode = feature.properties.PCF_VIOL_CATEGORY;
